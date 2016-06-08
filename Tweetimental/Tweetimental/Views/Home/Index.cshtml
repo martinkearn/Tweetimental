@@ -8,7 +8,8 @@
 <h1 style="font-family:'Blackout Midnight', Arial, sans-serif;">@ViewBag.Title</h1>
 <p>What is the sentiment of your tweets?</p>
 
-<form action="/Home/Index" method="post" class="form-inline">
+@using (Ajax.BeginForm("Index", "Home", null, new AjaxOptions {  }, new { @class = "form-inline" }))
+{
     <div class="form-group">
         <label class="sr-only" for="Handle">Handle</label>
         <input type="text" class="form-control" id="Handle" name="Handle" placeholder="Handle">
@@ -18,7 +19,7 @@
         <input type="number" class="form-control" id="Days" name="Days" placeholder="Days">
     </div>
     <button type="submit" class="btn btn-primary">Tweetimentalise</button>
-</form>
+}
 
 @if (!string.IsNullOrEmpty(Model.Message))
 {
@@ -43,4 +44,3 @@
         </div>
     </div>
 }
-
