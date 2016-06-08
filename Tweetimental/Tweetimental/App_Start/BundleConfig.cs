@@ -25,6 +25,7 @@ namespace Tweetimental
 
             bundles.Add(new StyleBundle("~/Content/css").Include(
                       "~/Content/bootstrap.css",
+                      "~/Content/stylesheet.css",
                       "~/Content/site.css"));
         }
     }

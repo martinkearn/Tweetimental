@@ -17,60 +17,64 @@ namespace Tweetimental.Controllers
 {
     public class HomeController : Controller
     {
-        public async Task<ActionResult> Index(string Handle = "martinkearn", Int32 Days = 7)
+        public async Task<ActionResult> Index(string Handle, Int32 Days = 5)
         {
             var vm = new IndexViewModel();
 
-            //get tweets
-            var statuses = searchUserTweet(Handle, 1, DateTime.UtcNow.Subtract(new TimeSpan(Days, 0,0,0)));
-
-            if (statuses.Count > 0)
+            if ((!string.IsNullOrEmpty(Handle)) && (Days > 0))
             {
-                //clean tweets of Twitter specific chars like # or @
-                var stausesAsString = GetCleanedTweetsAsString(statuses);
+                //get tweets
+                var statuses = searchUserTweet(Handle, 1, DateTime.UtcNow.Subtract(new TimeSpan(Days, 0, 0, 0)));
 
-
-                var charLimit = 1400;
-                var averageScore = 0.0;
-                var stausesAs1400String = new List<string>();
-
-                //check if tweets are blow chunking threshold
-                if (stausesAsString.Length <= charLimit)
+                if (statuses.Count > 0)
                 {
-                    averageScore = await GetSentimentScore(stausesAsString);
-                }
-                else {
-                    //chunk tweets into blocks of 1400 chars which is the limit for CS text analytics API
-                    stausesAs1400String = Enumerable
-                        .Range(0, stausesAsString.Length / charLimit)
-                        .Select(i => stausesAsString.Substring(i * charLimit, charLimit))
-                        .ToList();
+                    //clean tweets of Twitter specific chars like # or @
+                    var stausesAsString = GetCleanedTweetsAsString(statuses);
 
-                    //get sentiment scores for each block of 1400 chars
-                    var scores = new List<double>();
-                    foreach (var statusAs1400String in stausesAs1400String)
+
+                    var charLimit = 1400;
+                    var averageScore = 0.0;
+                    var stausesAs1400String = new List<string>();
+
+                    //check if tweets are blow chunking threshold
+                    if (stausesAsString.Length <= charLimit)
                     {
-                        scores.Add(await GetSentimentScore(statusAs1400String));
+                        averageScore = await GetSentimentScore(stausesAsString);
+                    }
+                    else
+                    {
+                        //chunk tweets into blocks of 1400 chars which is the limit for CS text analytics API
+                        stausesAs1400String = Enumerable
+                            .Range(0, stausesAsString.Length / charLimit)
+                            .Select(i => stausesAsString.Substring(i * charLimit, charLimit))
+                            .ToList();
+
+                        //get sentiment scores for each block of 1400 chars
+                        var scores = new List<double>();
+                        foreach (var statusAs1400String in stausesAs1400String)
+                        {
+                            scores.Add(await GetSentimentScore(statusAs1400String));
+                        }
+
+                        //get average for all scores
+                        averageScore = scores.Average();
                     }
 
-                    //get average for all scores
-                    averageScore = scores.Average();
+                    //populate view model
+                    vm.Statuses = statuses;
+                    vm.Score = averageScore;
+                    vm.Message = string.Empty;
+                }
+                else
+                {
+                    vm.Statuses = null;
+                    vm.Score = 0;
+                    vm.Message = "Could not find any Tweets for that handle";
                 }
 
-                //populate view model
-                vm.Statuses = statuses;
-                vm.Score = averageScore;
-                vm.Message = string.Empty;
+                vm.Handle = Handle;
+                vm.Days = Days;
             }
-            else
-            {
-                vm.Statuses = null;
-                vm.Score = 0;
-                vm.Message = "Could not find any Tweets for that handle";
-            }
-
-            vm.Handle = Handle;
-            vm.Days = Days;
 
             return View(vm);
         }
@@ -121,7 +125,8 @@ namespace Tweetimental.Controllers
                     searchResults.AddRange(tweets);
                     lastDateTime = tweets.Min(x => x.CreatedAt);
                 }
-                else {
+                else
+                {
                     lastDateTime = startDate;
                 }
 
@@ -158,14 +163,16 @@ namespace Tweetimental.Controllers
             client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", apikey);
 
             // Request body
-            var sentmentRequestDocument = new SentimentRequestDocument() {
+            var sentmentRequestDocument = new SentimentRequestDocument()
+            {
                 language = "en",
                 id = "87",
                 text = inputText
             };
             var sentmentRequestDocuments = new List<SentimentRequestDocument>();
             sentmentRequestDocuments.Add(sentmentRequestDocument);
-            var requestModel = new SentimentRequest() {
+            var requestModel = new SentimentRequest()
+            {
                 documents = sentmentRequestDocuments
             };
             var requestBodyString = JsonConvert.SerializeObject(requestModel);
